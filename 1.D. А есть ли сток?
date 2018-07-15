@@ -1,0 +1,118 @@
+/*
+Дана матрица смежности ориентированного графа. Проверьте, содержит ли граф вершину-сток. То есть вершину, в которую ведут ребра из всех вершин, и из которой не выходит ни одного ребра. Требуемая сложность O(V).
+
+Формат ввода
+В 1-й строке вводится кол-во вершин графа, далее матрица смежности. Числа в строке матрицы разделены пробелом.
+
+Формат вывода
+YES если сток найден и NO если нет.
+*/
+#include <iostream>
+#include<vector>
+
+using namespace std;
+
+struct IGraph {
+	virtual ~IGraph() {}
+	// Добавление ребра от from к to.
+	virtual void AddEdge(int from, int to) = 0;
+
+	virtual int VerticesCount() const = 0;
+};
+
+class CMatrixGraph : IGraph {
+
+public:
+	CMatrixGraph(int a);
+	~CMatrixGraph() {};
+	virtual void AddEdge(int from, int to) override;
+	virtual int VerticesCount() const override;
+	bool FindStock() const;
+	void PrintGr();
+
+private:
+	int  numOfVertices;
+	vector<vector<bool>> matrixArr;
+};
+void CMatrixGraph::PrintGr() {
+	for (int i = 0; i < numOfVertices; i++) {
+		for (int j = 0; j < numOfVertices; j++) {
+			cout << matrixArr[i][j] << " ";
+		}
+	}
+}
+//CMatrixGraph, хранящий граф в виде матрицы смежности
+CMatrixGraph::CMatrixGraph(int a) : // конструктор 
+	numOfVertices(a),
+	matrixArr(a)
+{
+	for (auto &row : matrixArr)
+	{
+		row.resize(numOfVertices); //задаёт размерность таблицы
+	}
+	for (int i = 0; i < numOfVertices; i++) { //заполняет таблицу значениями false
+		for (int j = 0; j < numOfVertices; j++) {
+			matrixArr[i][j] = false;
+		}
+	}
+}
+
+void CMatrixGraph::AddEdge(int from, int to) {
+	if (!matrixArr[from][to]) matrixArr[from][to] = true; // добавление новой вершины
+}
+
+int CMatrixGraph::VerticesCount() const {
+	return numOfVertices; // кол-во вершин в графе
+}
+bool CMatrixGraph::FindStock()const {
+	
+		vector<bool> hasPosToBeStock(numOfVertices, true); // vector that says if it has pos to be stock
+
+		for (int nextV = 0; nextV < numOfVertices; nextV++) {
+	
+			if (!hasPosToBeStock[nextV]) continue;//can not be stock
+			//may be stock		
+			
+				int i = (nextV + 1) % numOfVertices;
+				 do{
+					if (matrixArr[nextV][i] == 0) {
+						hasPosToBeStock[i] = false;
+					}
+					else {
+						hasPosToBeStock[nextV] = false;
+						break;
+					}
+					i = (i + 1) % numOfVertices;
+				}while(i != nextV);//does it have a line of 00000000000000?
+
+
+				if (i == nextV) {
+					for (int m = 0; m < numOfVertices; m++)
+						if (matrixArr[m][nextV] == 0 && m != nextV) {
+							return false;
+						}
+					return true;
+				}//does it have o col 111111111101111111? 
+			
+		}
+		return false;
+	}
+int main()
+{
+	int n;
+	cin >> n;
+	CMatrixGraph myGraph(n); // создаём граф размера n
+	int inputv;
+	//считываем граф
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++) {
+			cin >> inputv;
+			if (inputv == 1) myGraph.AddEdge(i, j);
+		}
+	 
+	if (myGraph.FindStock()) cout << "YES";
+	else cout << "NO";
+	cin >> n;
+	return 0;
+}
+
