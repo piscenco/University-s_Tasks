@@ -1,0 +1,125 @@
+/*Необходимо написать торгового советника для поиска арбитража.
+Арбитраж - это торговля по цепочке различных валют в надежде заработать на небольших различиях в коэффициентах. Например, есть следующие курсы валют:
+GBP/USD: 0.67
+RUB/GBP: 78.66
+USD/RUB: 0.02
+Имея 1$ и совершив цикл USD->GBP->RUB->USD, получим 1.054$. Таким образом заработав 5.4
+
+Формат ввода
+Первая строка содержит число N – количество возможных валют (определяет размер таблицы котировок). 
+Далее следует построчное представление таблицы. Диагональные элементы (i, i) пропущены (подразумевается, что курс валюты к себе же 1.0). 
+В элементе таблицы (i, j) содержится обменный курс i->j. 
+Если обмен в данном направлении не производится, то -1.
+Формат вывода
+Выведите YES, если арбитраж есть, и NO, иначе.*/
+#include <iostream>
+#include <vector>
+#include <math.h>
+#include <limits>
+
+struct edge {
+	int from;
+	int to;
+	double w;
+	edge(int a, int b, double c): from(a), to(b), w(c) {};
+};
+
+class CMatrixGraph {
+public:
+	CMatrixGraph(int  a);
+
+	~CMatrixGraph() {};
+
+	void AddEdge(int from, int to, double weight);
+
+	void GetPrVertices(int vertex, std::vector<int> &vertices) const;
+
+	double EdgeWeight(int v, int u) const;
+
+	std::vector<edge> GetE() const {
+		std::vector<edge> res;
+		for (int i = 0; i < numOfVertices; i++) {
+			for (int j = 0; j < numOfVertices; j++) {
+				if (graphArr[i][j] != std::numeric_limits<double>::min()) {
+					res.emplace_back(edge(i, j, graphArr[i][j]));
+				}
+			}
+		}
+		return res;
+			
+	}
+
+
+private:
+	int numOfVertices;
+	std::vector<std::vector<double>> graphArr;
+};
+
+CMatrixGraph::CMatrixGraph(int a) :
+	numOfVertices(a),
+	graphArr(numOfVertices, std::vector<double>(numOfVertices, std::numeric_limits<double>::min()))
+{}
+
+void CMatrixGraph::AddEdge(int from, int to, double weight) {
+	graphArr[from][to] = weight;
+}
+
+void CMatrixGraph::GetPrVertices(int vertex, std::vector<int> &vertices) const {
+	vertices.clear();
+	for (int i = 0; i < numOfVertices; i++)
+		if (graphArr[i][vertex] != -1)
+			vertices.push_back(i);
+}
+
+double CMatrixGraph::EdgeWeight(int v, int u) const {
+	return graphArr[v][u];
+}
+
+
+bool BellmanFord(const CMatrixGraph &graph, int n) {
+	    std::vector<double> d(n, std::numeric_limits<int>::max());
+		std::vector<edge> graph_edges = graph.GetE();
+
+		for (int i = 0; i < n - 1; ++i) {
+			bool changed = false;
+			for (int j = 0; j < graph_edges.size(); ++j) {
+				edge  e = graph_edges[j];
+				if (d[e.to] < d[e.from] + e.w) {
+					d[e.to] = d[e.from] + e.w;
+					changed = true;
+				}
+			}
+			if (!changed)
+				break;
+		}	
+		for (int j = 0; j < graph_edges.size(); ++j) {
+			edge e = graph_edges[j];
+			if (d[e.to] < d[e.from] + e.w) {
+					return true;
+			}
+		}
+		return false;
+}
+
+int main() {
+	int n = 0;
+	std::cin >> n;
+	CMatrixGraph graph(n);
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			if (i == j)
+				continue;
+			double x;
+			std::cin >> x;
+			if (x != -1) {
+				x = log(x);
+				graph.AddEdge(i, j, x);
+			}
+
+		}
+	}
+	bool result = BellmanFord(graph, n);
+	std::cout << (result ? "YES" : "NO");
+	std::cin >> n;
+	return 0;
+}
