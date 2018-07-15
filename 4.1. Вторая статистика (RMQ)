@@ -1,0 +1,89 @@
+/*Дано число N и последовательность из N целых чисел. Найти вторую порядковую статистику на заданных диапазонах.
+
+Для решения задачи используйте структуру данных Sparse Table. Требуемое время обработки каждого диапазона O(1). Время подготовки структуры данных .
+
+Формат ввода
+В первой строке заданы 2 числа: размер последовательности N и количество диапазонов M.
+Следующие N целых чисел задают последовательность. Далее вводятся M пар чисел - границ диапазонов.
+Гарантируется, что каждый диапазон содержит как минимум 2 элемента.
+Формат вывода
+Для каждого из M диапазонов напечатать элемент последовательности - 2ю порядковую статистику. По одному числу в строке.*/
+
+#include <math.h>
+#include <iostream>
+#include <vector>
+#include <algorithm> 
+#include <limits>
+#include <set>
+
+using std::vector;
+using std::pair;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::make_pair;
+using std::min;
+using std::set;
+
+pair<int, int> Meld(pair<int, int>& a, pair<int, int>& b) {
+	int max_num = std::numeric_limits<int>::max();
+	pair<int, int> c = make_pair(max_num, max_num);
+	set <int> obj;	
+	if (a.first < b.first) {
+		c.first = a.first;		
+	}
+	else {
+		c.first = b.first;
+	}
+	obj.insert(b.first);
+	obj.insert(a.first);
+	obj.insert(a.second);
+	obj.insert(b.second);
+	obj.erase(obj.find(c.first));
+	for (int i : obj) {
+		if (i < c.second) {
+			c.second = i;
+		}
+	}
+	return c;
+}
+
+
+void buildSparseTable(vector<int>& arr, vector<vector<pair<int, int>>>& sparseTable) {
+	int n = arr.size();
+	for (int i = 0; i < n; ++i)
+		sparseTable[0][i] = make_pair(arr[i], arr[i]);
+
+	for (int i = 1; i < sparseTable.size(); ++i) {
+		for (int j = 0; j < n - (1 << i) + 1; ++j) {
+			sparseTable[i][j] = Meld(sparseTable[i - 1][j], sparseTable[i - 1][j + (1 << (i - 1))]);
+		}
+	}
+}
+
+int FindSecMin(int left, int right, vector<vector<pair<int, int>>>& sparse_table) {
+	int j = static_cast<int>(log2(right - left + 1));
+	int res = Meld(sparse_table[j][left], sparse_table[j][right - (1 << j) + 1]).second;
+	return res;
+}
+
+
+int main()
+{
+	int N, M = 0;
+	cin >> N >> M;
+	vector<int> array_of_numbers(N);
+	for (int i = 0; i < N; ++i) {
+		cin >> array_of_numbers[i];
+	}
+	vector<vector<pair<int, int>>> sparseTable(static_cast<int>(log2(N)+1), vector<pair<int, int>>(N, pair<int, int>(0, 0)));
+	buildSparseTable(array_of_numbers, sparseTable);
+	int from, to;
+	for (int i = 0; i < M; ++i) {
+		cin >> from >> to;
+		from--;
+		to--;
+		cout << FindSecMin(from, to, sparseTable) << endl;
+	}
+	return 0;
+}
