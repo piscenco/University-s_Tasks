@@ -1,0 +1,139 @@
+/*
+Дан невзвешенный неориентированный граф. Найдите цикл минимальной длины. Требуемая сложность O(VE), + 1 балл за O(V + E).
+
+Формат ввода
+В первой строке вводятся два натуральных числа N и M, не превосходящих 10000. Далее идут M строк по 2 числа (от 0 до N-1) - индексы вершин между которыми есть ребро.
+
+Формат вывода
+Требуется вывести одно целое число равное длине минимального цикла. Если цикла нет, то вывести -1.
+*/
+
+#include<vector>
+#include <list>
+#include<queue>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+struct IGraph {
+
+	virtual ~IGraph() {}
+
+	// Добавление ребра от from к to.
+	virtual void AddEdge(int from, int to) = 0;
+
+	virtual int VerticesCount() const = 0;
+
+	virtual void GetNextVertices(int vertex, std::vector<int>& vertices) const = 0;// vector for resuls clear if not empty
+
+};
+
+// создаётся вектор списков, где номер ячейки вектора - исходящая вершина, а в списке - куда существуют рёбра
+//changed for nonoriented graph
+class CListGraph : IGraph {
+public:
+	CListGraph(int a);
+	~CListGraph() {}
+	// Добавление ребра от from к to.
+	void AddEdge(int from, int to);
+	int MinCicleFind();
+	int VerticesCount() const;
+
+private:
+	void BFS(int root);
+	int numOfVertices;
+	int minCicleNum;
+	void GetNextVertices(int vertex, vector<int>& vertices) const;
+	vector<vector<int>> graphArr;
+};
+
+CListGraph::CListGraph(int a) : // конструктор 
+	numOfVertices(a),
+	minCicleNum(a + 1),
+	graphArr(a) {
+	for (int i = 0; i < a; i++) {
+		graphArr[i].clear();
+	}
+}
+
+int CListGraph::VerticesCount() const {
+	return numOfVertices; // кол-во вершин в графе
+}
+
+void CListGraph::AddEdge(int from, int to) {
+	if (find(graphArr[from].begin(), graphArr[from].end(), to) == graphArr[from].end())
+		graphArr[from].push_back(to);
+	if (find(graphArr[to].begin(), graphArr[to].end(), from) == graphArr[to].end())
+		graphArr[to].push_back(from);
+}
+
+void CListGraph::GetNextVertices(int vertex, vector<int>& vertices) const {
+	// очищает вектор, потом копирует все элементы списка в вектор
+	if (!vertices.empty()) vertices.clear();
+	vertices.reserve(graphArr[vertex].size());
+	copy(std::begin(graphArr[vertex]), end(graphArr[vertex]), back_inserter(vertices));
+}
+
+void CListGraph::BFS(int root) {
+
+	queue<int> queue;
+	queue.push(root);
+
+	vector<vector<int>> vEl(numOfVertices, vector<int>(3)); //индекс - значение. 0 - посещен ли, 1 - родитель, 2 - расстояние
+	for (int i = 0; i < numOfVertices; i++) {
+		vEl[i][0] = 0; //all are not viseted
+	}
+	vEl[root][0] = 1;
+	vEl[root][1] = -1;//псевдородительская вершина
+	vEl[root][2] = 0;
+	vector<int> neighbour;
+	while (!queue.empty())
+	{
+		int seenEl = queue.front();
+		GetNextVertices(seenEl, neighbour); // find neighbour node
+		queue.pop();
+
+		for (int i = 0; i < neighbour.size(); i++)
+		{
+			if (!vEl[neighbour[i]][0])
+			{
+				vEl[neighbour[i]][0] = 1;//mark visited
+				vEl[neighbour[i]][1] = seenEl;
+				vEl[neighbour[i]][2] = vEl[seenEl][2] + 1;
+				queue.push(neighbour[i]);
+			}
+			else {
+				if (neighbour[i] != vEl[seenEl][1]) {
+					minCicleNum = min(minCicleNum, vEl[neighbour[i]][2] + vEl[seenEl][2]); //выбирается мин цикл
+					break;
+				}
+				//it is not it's parent, a cicle found
+			}
+		}
+	}
+}
+int CListGraph::MinCicleFind() {
+	for (int i = 0; i < numOfVertices; i++) {
+		BFS(i);
+	}
+	return minCicleNum;
+}
+
+int main()
+{
+	int n;
+	int m;
+	cin >> n >> m;
+	CListGraph myGraph(n);
+	int from;
+	int to;
+	for (int i = 0; i < m; i++) {
+		cin >> from >> to;
+		myGraph.AddEdge(from, to);
+	}
+	int result = myGraph.MinCicleFind();
+	if (result == myGraph.VerticesCount() + 1) cout << "-1";
+	else cout << result + 1; // функция считает колличество вершин в цикле, а путь - ребра, поэтому +1
+
+	return 0;
+}
