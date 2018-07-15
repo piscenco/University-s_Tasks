@@ -1,0 +1,132 @@
+/*Задано дерево с корнем, содержащее (1 ≤ n ≤ 100 000) вершин, пронумерованных от 0 до n-1.
+Требуется ответить на m (1 ≤ m ≤ 10 000 000) запросов о наименьшем общем предке для пары вершин.
+Запросы генерируются следующим образом. Заданы числа a1, a2 и числа x, y и z.
+Числа a3, ..., a2m генерируются следующим образом: ai = (x ⋅ ai-2 + y ⋅ ai-1 + z) mod n.
+Первый запрос имеет вид (a1, a2). Если ответ на i-1-й запрос равен v, то i-й запрос имеет вид ((a2i-1 + v) mod n, a2i).
+
+Для решения задачи можно использовать метод двоичного подъёма.
+
+Формат ввода
+Первая строка содержит два числа: n и m.
+Корень дерева имеет номер 0.
+Вторая строка содержит n-1 целых чисел, i-е из этих чисел равно номеру родителя вершины i.
+Третья строка содержит два целых числа в диапазоне от 0 до n-1: a1 и a2.
+Четвертая строка содержит три целых числа: x, y и z, эти числа неотрицательны и не превосходят 109.
+
+Формат вывода
+Выведите в выходной файл сумму номеров вершин — ответов на все запросы.Задано дерево с корнем, содержащее (1 ≤ n ≤ 100 000) вершин, пронумерованных от 0 до n-1.
+Требуется ответить на m (1 ≤ m ≤ 10 000 000) запросов о наименьшем общем предке для пары вершин.
+Запросы генерируются следующим образом. Заданы числа a1, a2 и числа x, y и z.
+Числа a3, ..., a2m генерируются следующим образом: ai = (x ⋅ ai-2 + y ⋅ ai-1 + z) mod n.
+Первый запрос имеет вид (a1, a2). Если ответ на i-1-й запрос равен v, то i-й запрос имеет вид ((a2i-1 + v) mod n, a2i).
+
+Для решения задачи можно использовать метод двоичного подъёма.
+
+Формат ввода
+Первая строка содержит два числа: n и m.
+Корень дерева имеет номер 0.
+Вторая строка содержит n-1 целых чисел, i-е из этих чисел равно номеру родителя вершины i.
+Третья строка содержит два целых числа в диапазоне от 0 до n-1: a1 и a2.
+Четвертая строка содержит три целых числа: x, y и z, эти числа неотрицательны и не превосходят 109.
+
+Формат вывода
+Выведите в выходной файл сумму номеров вершин — ответов на все запросы.*/
+
+#include <iostream>
+#include <vector>
+#include <math.h>
+#include <iostream>
+#include <vector>
+
+using std::vector;
+using std::pair;
+using std::cin;
+using std::cout;
+using std::make_pair;
+
+
+class FromLCAtoRMQ {
+public:
+	//constuctor
+	FromLCAtoRMQ(vector<vector<int>>& p) : parents(p), numOfNodes(p.size()), clock(0)
+	{
+		enter_time.resize(numOfNodes);
+		leave_time.resize(numOfNodes);
+		SparceTable.resize(numOfNodes, vector<int>(static_cast<int>(log2(numOfNodes)) + 1));
+		DFS(0, 0);
+	}
+	int Calculate(std::pair<int, int> next)
+	{
+		int a = next.first;
+		int b = next.second;
+		if (enter_time[a] <= enter_time[b]
+			&& leave_time[b] <= leave_time[a])
+			return a;
+		if (enter_time[b] <= enter_time[a]
+			&& leave_time[a] <= leave_time[b])
+			return b;
+		for (int i = static_cast<int>(log2(numOfNodes)); i >= 0; --i) {
+			if (!(enter_time[SparceTable[a][i]] <= enter_time[b]
+				&& leave_time[b] <= leave_time[SparceTable[a][i]]))
+				a = SparceTable[a][i];
+		}
+		return SparceTable[a][0];
+	}
+
+private:
+	int clock;
+	int numOfNodes;
+	vector<vector<int>>& parents;
+	vector<int> enter_time;
+	vector<int> leave_time;
+	vector<vector<int>> SparceTable;
+
+	void DFS(int node, int parent) //needed to convert
+	{
+		enter_time[node] = clock++;
+		SparceTable[node][0] = parent;
+		for (int i = 1; i <= static_cast<int>(log2(numOfNodes)); i++)
+			SparceTable[node][i] = SparceTable[SparceTable[node][i - 1]][i - 1];
+		for (int i = 0; i < parents[node].size(); ++i) {
+			unsigned to = parents[node][i];
+			if (to != parent)
+				DFS(to, node);
+		}
+		leave_time[node] = clock++;
+	}
+};
+
+pair<long, long> Next(long & a, long& b, long x, long y, long z, int n, int prevRes) {
+	pair<long, long> res = make_pair((a + prevRes) % n, b);
+	a = (a * x + b * y + z) % n;
+	b = (b * x + a * y + z) % n;
+	return res;
+}
+
+long CalculateSum(long& a, long& b, int x, int y, int z, int n, int m, vector<vector<int>>& parents) {
+	FromLCAtoRMQ lca(parents);
+	unsigned long ans = 0;
+	unsigned result = 0;
+	for (unsigned i = 0; i < m; i++) {
+		result = lca.Calculate(Next(a, b, x, y, z, n, result));
+		ans += result;
+	}
+	return ans;
+}
+
+int main() {
+	int n, m;
+	cin >> n >> m;
+	vector<vector<int>> parents(n);
+	int p;
+	for (int i = 1; i < n; i++) {
+		cin >> p;
+		parents[p].push_back(i);
+	}
+	long a, b;
+	cin >> a >> b;
+	long x, y, z;
+	cin >> x >> y >> z;
+	cout << CalculateSum(a, b, x, y, z, n, m, parents);
+	return 0;
+}
