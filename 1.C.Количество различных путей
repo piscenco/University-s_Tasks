@@ -1,0 +1,137 @@
+/*
+Дан невзвешенный неориентированный граф. В графе может быть несколько кратчайших путей между какими-то вершинами. Найдите количество различных кратчайших путей между заданными вершинами. Требуемая сложность O(V+E).
+
+Формат ввода
+v: кол-во вершин (макс. 50000),
+n: кол-во ребер(макс. 200000),
+n пар реберных вершин,
+пара вершин (u, w) для запроса.
+
+Формат вывода
+Количество кратчайших путей от v к w.
+*/
+
+#include <vector> 
+#include <list> 
+#include <queue> 
+#include <iostream> 
+#include <algorithm> 
+using namespace std;
+
+struct IGraph {
+
+	virtual ~IGraph() {}
+
+	// Добавление ребра от from к to. 
+	virtual void AddEdge(int from, int to) = 0;
+
+	virtual int VerticesCount() const = 0;
+
+	virtual void GetNextVertices(int vertex, std::vector<int>& vertices) const = 0;// vector for resuls clear if not empty 
+
+};
+
+// создаётся вектор списков, где номер ячейки вектора - исходящая вершина, а в списке - куда существуют рёбра 
+//changed for nonoriented graph 
+class CListGraph : IGraph {
+public:
+	CListGraph(int a);
+	~CListGraph() {}
+	// Добавление ребра от from к to. 
+	void AddEdge(int from, int to);
+	int NumOfW(int from, int to);
+	int VerticesCount() const;
+
+private:
+	int numOfVertices; ;
+	void GetNextVertices(int vertex, vector<int>& vertices) const;
+	vector<vector<int>> graphArr;
+};
+
+CListGraph::CListGraph(int a) : // конструктор 
+	numOfVertices(a),
+	graphArr(a) {
+	for (int i = 0; i < a; i++) {
+		graphArr[i].clear();
+	}
+}
+
+int CListGraph::VerticesCount() const {
+	return numOfVertices; // кол-во вершин в графе 
+}
+
+void CListGraph::AddEdge(int from, int to) {
+	if (find(graphArr[from].begin(), graphArr[from].end(), to) == graphArr[from].end())
+		graphArr[from].push_back(to);
+	if (find(graphArr[to].begin(), graphArr[to].end(), from) == graphArr[to].end())
+		graphArr[to].push_back(from);
+}
+
+void CListGraph::GetNextVertices(int vertex, vector<int>& vertices) const {
+	// очищает вектор, потом копирует все элементы списка в вектор 
+	if (!vertices.empty()) vertices.clear();
+	vertices.reserve(graphArr[vertex].size());
+	copy(std::begin(graphArr[vertex]), end(graphArr[vertex]), back_inserter(vertices));
+}
+
+int CListGraph::NumOfW(int from, int to) {
+
+	queue<int> queue;
+	queue.push(from);
+
+	vector<vector<int>> vEl(numOfVertices, vector<int>(4)); //индекс - значение. 0 - посещен ли, 1 - родитель, 2 - расстояние 
+	for (int i = 0; i < numOfVertices; i++) { // 3 - кол-во путей 
+		vEl[i][0] = 0; //all are not viseted 
+		vEl[i][3] = 0; //нет путей 
+	}
+	vEl[from][0] = 1;
+	vEl[from][1] = -1;//псевдородительская вершина 
+	vEl[from][2] = 0;
+	vEl[from][3] = 1;
+	vector<int> neighbour;
+	while (!queue.empty())
+	{
+		int seenEl = queue.front();
+		GetNextVertices(seenEl, neighbour); // find neighbour node 
+		queue.pop();
+
+		for (int i = 0; i < neighbour.size(); i++)
+		{
+			if (!vEl[neighbour[i]][0])
+			{
+				vEl[neighbour[i]][0] = 1;//mark visited 
+				vEl[neighbour[i]][1] = seenEl;
+				vEl[neighbour[i]][2] = vEl[seenEl][2] + 1;
+				vEl[neighbour[i]][3] = vEl[seenEl][3];
+				queue.push(neighbour[i]);
+			}
+			else {
+				if (neighbour[i] != vEl[seenEl][1] && vEl[neighbour[i]][2] == vEl[seenEl][2] + 1) {
+					vEl[neighbour[i]][3] += vEl[seenEl][3];
+				}
+			}
+		}
+
+	}
+	return vEl[to][3];
+}
+
+int main()
+{
+	int n;
+	int m;
+	cin >> n >> m;
+	CListGraph myGraph(n);
+	int v1;
+	int v2;
+	for (int i = 0; i < m; i++) {
+		cin >> v1 >> v2;
+		myGraph.AddEdge(v1, v2);
+	}
+	int from;
+	int to;
+	cin >> from >> to;
+	int result = myGraph.NumOfW(from, to);
+	cout << result;
+	return 0;
+}
