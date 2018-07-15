@@ -1,0 +1,186 @@
+/*
+Дан ориентированный граф. Определите, какое минимальное число ребер необходимо добавить, чтобы граф стал сильносвязным. В графе возможны петли.
+
+Формат ввода
+В первой строке указывается число вершин графа V, во второй – число ребер E, в последующих – E пар вершин, задающих ребра.
+
+Формат вывода
+Минимальное число ребер k.
+*/
+#include <algorithm>
+#include <unordered_set>
+#include <vector>
+#include <list>
+#include <stack>
+#include <iostream>
+#include <iterator>
+
+using namespace std;
+
+class CListGraph;
+
+class Tarjan {
+private:
+	friend class CListGraph;
+	vector<list<int>> FindCCs(CListGraph * graph);
+	// Tarjan algorithm. Finds SCC
+	void DFS(int vertex, CListGraph * graph);
+	//CListGraph condense();
+	int clock;
+	int curComp;
+	//CListGraph * graph_;
+	int n_;
+	stack<int> DFSStack;
+	vector<int> ccs;
+	vector<bool> isVisited;
+	vector<int> index;
+	vector<list<int>>newData;
+};
+
+// создаётся вектор списков, где номер ячейки вектора - исходящая вершина, а в списке - куда существуют рёбра
+class CListGraph {
+public:
+	friend class Tarjan;	//объявление дружественных функций
+							//теперь имеется доступ к приватным полям 
+							//это будет использовано в функции change
+	CListGraph(int a);
+	~CListGraph() {}
+	// Добавление ребра от from к to.
+	void AddEdge(int from, int to);
+	int VerticesCount() const;
+
+	void GetNextVertices(int vertex, vector<int>& vertices) const;
+	void GetPrevVertices(int vertex, vector<int>& vertices) const;
+	void Change(Tarjan r); //заменяет вектор списков этого графа на сконденсированный, что бы не реализовывать еще 1 класс
+						   //или не делать этот вектор публичным
+	//сколько ребер необходимо добавить. Используется для уже сконденсированный граф.
+
+private:
+
+	int numOfVertices;
+	vector<list<int>> graphArr;
+};
+
+void CListGraph::Change(Tarjan r) {
+	graphArr = r.FindCCs(this);
+	numOfVertices = graphArr.size();
+
+}
+CListGraph::CListGraph(int a) : // конструктор 
+	numOfVertices(a),
+	graphArr(a) {}
+
+int CListGraph::VerticesCount() const {
+	return numOfVertices; // кол-во вершин в графе
+}
+
+void CListGraph::AddEdge(int from, int to) {
+	if (find(graphArr[from].begin(), graphArr[from].end(), to) == graphArr[from].end())
+		graphArr[from].push_front(to);
+}
+
+void CListGraph::GetNextVertices(int vertex, vector<int>& vertices) const {
+	// очищает вектор, потом копирует все элементы списка в вектор
+	if (!vertices.empty()) vertices.clear();
+	vertices.reserve(graphArr[vertex].size());
+	copy(std::begin(graphArr[vertex]), end(graphArr[vertex]), back_inserter(vertices));
+	sort(vertices.rbegin(), vertices.rend());
+
+}
+
+void CListGraph::GetPrevVertices(int vertex, vector<int>& vertices) const {
+	//проходит по спискам и ищет необходимый элемент
+	if (!vertices.empty()) vertices.clear();
+	for (int i = 0; i < numOfVertices; i++) {
+		if (find(graphArr[i].begin(), graphArr[i].end(), vertex) != graphArr[i].end()) {
+			vertices.push_back(i);
+		}
+	}
+}
+
+
+int HowManyToAdd(CListGraph graph) { //фун считает ск ребер радо добавить
+	// сколько вершин имеет исход и вход ребра?
+	Tarjan r;
+	graph.Change(r);//конденсируем граф с помощью алг Тарьяна 
+	int numOfVertices = graph.VerticesCount();
+	int stock = 0;
+	int source = 0;
+	if (numOfVertices > 1)
+		for (int i = 0; i < numOfVertices; i++) {
+			vector<int> v;
+			graph.GetNextVertices(i, v);
+			if (v.size() == 0) source++;//есть исход ребра
+			graph.GetPrevVertices(i, v);
+			if (v.size() == 0) stock++;//есть вход ребра
+		}
+	return max(stock, source);
+}
+
+int main()
+{
+	int n;
+	int m;
+	cin >> n >> m;
+	CListGraph graph(n);
+
+	for (int i = 0; i < m; i++) {
+		int a, b;
+		cin >> a >> b;
+		graph.AddEdge(a - 1, b - 1);
+	}
+
+	cout << HowManyToAdd(graph);
+}
+
+vector<list<int>> Tarjan::FindCCs(CListGraph * graph)
+{//ищет комп сил связ
+	isVisited.assign(graph->VerticesCount(), false);
+	index.assign(graph->VerticesCount(), 0);
+	ccs.assign(graph->VerticesCount(), 0);
+	clock = 0;
+	curComp = 0;
+
+	for (int i = 0; i < graph->VerticesCount(); i++) {
+		if (!isVisited[i])
+			DFS(i, graph); //запускаем дфс
+	}
+	newData.assign(curComp, list<int>(0));
+	for (int v = 0; v < graph->VerticesCount(); v++) {
+		vector<int> vertices;
+
+		graph->GetNextVertices(v, vertices);
+		for (int u : vertices)
+			if (ccs[u] != ccs[v])
+				newData[ccs[v]].push_front(ccs[u]);
+	}
+	return newData;
+}
+
+void Tarjan::DFS(int vertex, CListGraph * graph)
+{
+	index[vertex] = clock++;
+	isVisited[vertex] = true;
+	DFSStack.push(vertex);
+	bool flag = true;
+	vector<int> neighbours;
+	graph->GetNextVertices(vertex, neighbours);
+	for (int i : neighbours) {
+		if (!isVisited[i]) DFS(i, graph);
+		if (index[i] < index[vertex]) {
+			index[vertex] = index[i];
+			flag = false;//у него не наим индекс
+		}
+	}
+	if (flag) { //собираем вместе компоненту
+		while (true) {
+			int x = DFSStack.top();
+			DFSStack.pop();
+			ccs[x] = curComp;
+			index[x] = graph->VerticesCount() + 1;
+			if (vertex == x)
+				break;
+		}
+		curComp++;
+	}
+}
