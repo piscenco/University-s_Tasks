@@ -1,0 +1,167 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <utility>
+#include <algorithm>
+#include <set>
+#include <math.h>
+
+	using std::vector;
+	using std::queue;
+	using std::set;
+
+	enum res { NoMoves, CanNotDo, NeedToMove };
+
+	struct gamePos {
+	public:
+		gamePos() { vector<vector<int>> matr(3, vector<int>(3)); }
+		void set(int a, int b, int c) {
+			matr[a][b] = c;
+		}
+		~gamePos() {};
+		vector<vector<int>> matr;
+		vector<char> parent;
+	};
+	
+	long ChangeV(vector<vector<int> > a) {
+		long newV = 0;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				//std::cout << pow(10, i*3 + j + 1)<< std :: endl;
+				newV += a[i][j] * pow(10, i * 3 + j);
+			}
+		}
+		return newV;
+	}
+
+	bool IsTheSame(vector<vector<int> > a) {
+		if (a[0][0] == 1 & a[0][1] == 2 & a[0][2] == 3 & a[1][0] == 4 & a[1][1] == 5 & a[1][2] == 6 & a[2][0] == 7 & a[2][1] == 8 & a[2][2] == 0)
+			return true;
+		return false;
+	}
+	vector <char> MysticSquare(vector<vector<int>>& initial, res & ansType) {
+		vector<char> v;
+		if (IsTheSame(initial)) {
+			ansType = NoMoves;
+			return v;
+		}
+		queue<gamePos> myQueue;
+		set<long> mySet;
+		gamePos next;
+		next.matr = initial;
+		myQueue.push(next);
+
+		int i = 0;
+		while (i < 628800 && !IsTheSame(next.matr) && !myQueue.empty()) {
+			next = myQueue.front();
+			myQueue.pop();
+			int zeroPos1;
+			int zeroPos2;
+			for (int p = 0; p < 3; ++p) {
+				for (int j = 0; j < 3; ++j) {
+					if (next.matr[p][j] == 0) {
+						zeroPos1 = p;
+						zeroPos2 = j;
+						break;
+					}
+				}
+			}
+			gamePos child = next;
+			int y = child.parent.size();
+			if (y == 0 || child.parent[y - 1] != 'D') {
+				if (zeroPos1 - 1 >= 0) {
+					child.matr[zeroPos1][zeroPos2] = child.matr[zeroPos1 - 1][zeroPos2];
+					child.set(zeroPos1 - 1, zeroPos2, 0);
+					child.parent.push_back('U');
+					long helpV = ChangeV(child.matr);
+					if (mySet.find(helpV) == mySet.end())
+					{
+						myQueue.push(child);
+						mySet.insert(helpV);
+					}
+				}
+			}
+			if (y == 0 || child.parent[y - 1] != 'U') {
+				child = next;
+				if (zeroPos1 + 1 < 3) {
+					child.matr[zeroPos1][zeroPos2] = child.matr[zeroPos1 + 1][zeroPos2];
+					child.set(zeroPos1 + 1, zeroPos2, 0);
+					child.parent.push_back('D');
+					long helpV = ChangeV(child.matr);
+					if (mySet.find(helpV) == mySet.end())
+					{
+						myQueue.push(child);
+						mySet.insert(helpV);
+					}
+				}
+			}
+			if (y == 0 || child.parent[y - 1] != 'L') {
+
+				child = next;
+				if (zeroPos2 + 1 < 3) {
+					child.matr[zeroPos1][zeroPos2] = child.matr[zeroPos1][zeroPos2 + 1];
+					child.matr[zeroPos1][zeroPos2 + 1] = 0;
+					child.parent.push_back('R');
+					long helpV = ChangeV(child.matr);
+					if (mySet.find(helpV) == mySet.end())
+					{
+						myQueue.push(child);
+						mySet.insert(helpV);
+					}
+				}
+			}
+
+			if (y = 0 || child.parent[y - 1] != 'R') {
+				child = next;
+				if (zeroPos2 - 1 >= 0) {
+					child.matr[zeroPos1][zeroPos2] = child.matr[zeroPos1][zeroPos2 - 1];
+					child.matr[zeroPos1][zeroPos2 - 1] = 0;
+					child.parent.push_back('L');
+					long helpV = ChangeV(child.matr);
+					if (mySet.find(helpV) == mySet.end())
+					{
+						myQueue.push(child);
+						mySet.insert(helpV);
+					}
+				}
+			}
+			++i;
+		
+		}
+		if (IsTheSame(next.matr))
+		{
+			
+			ansType = NeedToMove;
+			return next.parent;
+		}
+		ansType = CanNotDo;
+		return v;
+	}
+	int main() {
+		//62880 positions
+		vector<vector<int>> initial(3, vector<int>(3));
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < 3; ++j) {
+				std::cin >> initial[i][j];
+			}
+		}
+		vector<char> result;
+		res ansType;
+		result = MysticSquare(initial, ansType);
+		switch (ansType) {
+		case CanNotDo:
+			std::cout << "-1";
+			break;
+		case NoMoves:
+			std::cout << "0";
+			break;
+		case NeedToMove:
+			std::cout << result.size() << std::endl;
+			for (int i = 0; i < result.size(); i++) {
+				std::cout << result[i];
+			}
+			break;
+		}
+	
+		return 0;
+	}
